@@ -3,33 +3,18 @@
 <body style="background:#fff;color:#000;font:15px monospace;padding:8px">
 <pre id="o" style="white-space:pre-wrap;word-break:break-all;font-size:14px">running…</pre>
 <script>
-var out={href:location.href,hasWE:!!window.WE,weMethods:[],calls:[],err:null};
+var out={href:location.href,hasWE:!!window.WE,calls:[]};
 function show(){document.getElementById('o').textContent=JSON.stringify(out,null,1);}
-function methodsOf(b){var s={},a=[],o=b;for(var d=0;d<5&&o;d++){try{Object.getOwnPropertyNames(o).forEach(function(p){if(!s[p]){s[p]=1;a.push(p);}});}catch(e){}o=Object.getPrototypeOf(o);}return a;}
-function trig(method,args){
-  try{
-    window.WE.trigger(method, args||"{}",
-      function(r){out.calls.push("WE.trigger("+method+") OK:"+JSON.stringify(r).slice(0,600));show();},
-      function(e){out.calls.push("WE.trigger("+method+") FAIL:"+JSON.stringify(e).slice(0,300));show();});
-    out.calls.push("WE.trigger("+method+") [dispatched]");
-  }catch(e){out.calls.push("WE.trigger("+method+") EXC:"+e);}
-  show();
-}
-function trigStr(method,args){
-  try{
-    window.WE.triggerString(method, args||"{}",
-      function(r){out.calls.push("WE.triggerString("+method+") OK:"+JSON.stringify(r).slice(0,600));show();},
-      function(e){out.calls.push("WE.triggerString("+method+") FAIL:"+JSON.stringify(e).slice(0,300));show();});
-    out.calls.push("WE.triggerString("+method+") [dispatched]");
-  }catch(e){out.calls.push("WE.triggerString("+method+") EXC:"+e);}
+function ret(fn,action){
+  try{ var r=window.WE[fn](action,""); out.calls.push("WE."+fn+"(\""+action+"\") => "+JSON.stringify(r).slice(0,400)); }
+  catch(e){ out.calls.push("WE."+fn+"(\""+action+"\") !! "+String(e).slice(0,200)); }
   show();
 }
 try{
-  if(window.WE) out.weMethods=methodsOf(window.WE).slice(0,60);
-  // 只读：get_deviceid(IMEI 本机自有) + iswifi(无害)
-  trig("get_deviceid");
-  trig("iswifi");
-  trigStr("get_deviceid");
-}catch(e){out.err=String(e);}
-show();setTimeout(show,3000);
+  ret("triggerString","get_deviceid");     // IMEI
+  ret("triggerString","get_hash_deviceid"); // 设备哈希
+  ret("triggerString","getPhones");         // 本机号
+  ret("trigger","iswifi");                  // 布尔
+}catch(e){out.calls.push("FATAL:"+e);}
+show();
 </script></body>
