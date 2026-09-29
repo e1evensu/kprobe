@@ -3,24 +3,20 @@
 <body style="background:#fff;color:#000;font:15px monospace;padding:8px">
 <pre id="o" style="white-space:pre-wrap;word-break:break-all;font-size:14px">running…</pre>
 <script>
-var out={href:location.href,hasBridge:!!window.__windvane__,res:[]};
+var out={href:location.href,hasWindVane:(typeof window.WindVane),hasBridge:!!window.__windvane__,res:[]};
 function show(){document.getElementById('o').textContent=JSON.stringify(out,null,1);}
-function NC(obj,meth,param,tag){
+function ok(t,o,m){return function(r){out.res.push(t+" "+o+"."+m+" OK:"+JSON.stringify(r).slice(0,800));show();};}
+function bad(t,o,m){return function(e){out.res.push(t+" "+o+"."+m+" FAIL:"+JSON.stringify(e).slice(0,300));show();};}
+function C(t,o,m,p){
   try{
-    var r=window.__windvane__.nativeCall(obj,meth,param||{});
-    out.res.push(tag+" ▸ "+obj+"."+meth+" => "+JSON.stringify(r).slice(0,600));
-  }catch(e){out.res.push(tag+" ▸ "+obj+"."+meth+" !! "+String(e).slice(0,200));}
+    if(window.WindVane&&window.WindVane.call){window.WindVane.call(o,m,p||{},ok(t,o,m),bad(t,o,m));out.res.push(t+" "+o+"."+m+" [dispatched via WindVane.call]");}
+    else if(window.__windvane__&&window.__windvane__.call){window.__windvane__.call(o,m,p||{},ok(t,o,m),bad(t,o,m));out.res.push(t+" "+o+"."+m+" [dispatched via __windvane__.call]");}
+    else{out.res.push("no call API");}
+  }catch(e){out.res.push(t+" "+o+"."+m+" EXC:"+e);}
   show();
 }
-try{
-  NC("WVLocation","getLocation",{address:true,gps:true},"READ-定位");
-  NC("GG_WVLocation","getLocation",{address:true},"READ-定位2");
-  NC("CNWVLocation","getLocation",{},"READ-定位3");
-  NC("CNHybridBaseInfoPlugin","getBaseInfo",{},"READ-设备信息");
-  NC("BaseInfo","getBaseInfo",{},"READ-设备信息2");
-  NC("CNHybridCNAccount","isBindTaobao",{},"READ-账号绑定");
-  NC("CNHybridCNAccount","queryAuthorizedResult",{},"READ-授权态");
-  NC("WVContacts","find",{},"READ-通讯录");
-}catch(e){out.res.push("FATAL:"+e);}
-show();
+C("READ","WVLocation","getLocation",{address:true,gps:true,network:true});
+C("READ","CNHybridBaseInfoPlugin","getBaseInfo",{});
+C("READ","CNHybridCNAccount","isBindTaobao",{});
+show();setTimeout(show,4000);setTimeout(show,9000);setTimeout(show,15000);
 </script></body>
