@@ -6,26 +6,30 @@
 var out={href:location.href,hasWE:!!window.WE,weMethods:[],calls:[],err:null};
 function show(){document.getElementById('o').textContent=JSON.stringify(out,null,1);}
 function methodsOf(b){var s={},a=[],o=b;for(var d=0;d<5&&o;d++){try{Object.getOwnPropertyNames(o).forEach(function(p){if(!s[p]){s[p]=1;a.push(p);}});}catch(e){}o=Object.getPrototypeOf(o);}return a;}
-function tryCall(name){
+function trig(method,args){
   try{
-    var r=window.WE[name]();
-    out.calls.push("WE."+name+"() => "+JSON.stringify(r).slice(0,500));
-  }catch(e){out.calls.push("WE."+name+"() !! "+String(e).slice(0,200));}
+    window.WE.trigger(method, args||"{}",
+      function(r){out.calls.push("WE.trigger("+method+") OK:"+JSON.stringify(r).slice(0,600));show();},
+      function(e){out.calls.push("WE.trigger("+method+") FAIL:"+JSON.stringify(e).slice(0,300));show();});
+    out.calls.push("WE.trigger("+method+") [dispatched]");
+  }catch(e){out.calls.push("WE.trigger("+method+") EXC:"+e);}
   show();
 }
-function tryCallCB(name){
+function trigStr(method,args){
   try{
-    window.WE[name]("{}",function(r){out.calls.push("WE."+name+"(cb) OK:"+JSON.stringify(r).slice(0,500));show();},function(e){out.calls.push("WE."+name+"(cb) FAIL:"+JSON.stringify(e).slice(0,200));show();});
-    out.calls.push("WE."+name+"(cb) [dispatched]");
-  }catch(e){out.calls.push("WE."+name+"(cb) EXC:"+e);}
+    window.WE.triggerString(method, args||"{}",
+      function(r){out.calls.push("WE.triggerString("+method+") OK:"+JSON.stringify(r).slice(0,600));show();},
+      function(e){out.calls.push("WE.triggerString("+method+") FAIL:"+JSON.stringify(e).slice(0,300));show();});
+    out.calls.push("WE.triggerString("+method+") [dispatched]");
+  }catch(e){out.calls.push("WE.triggerString("+method+") EXC:"+e);}
   show();
 }
 try{
-  if(window.WE){ out.weMethods=methodsOf(window.WE).slice(0,60); }
-  // 只读探测：iswifi(无害) + get_deviceid(IMEI, 本机自有) —— 不碰 addCart/opennew 等写/危险
-  tryCall("iswifi");
-  tryCall("get_deviceid");
-  tryCallCB("get_deviceid");
+  if(window.WE) out.weMethods=methodsOf(window.WE).slice(0,60);
+  // 只读：get_deviceid(IMEI 本机自有) + iswifi(无害)
+  trig("get_deviceid");
+  trig("iswifi");
+  trigStr("get_deviceid");
 }catch(e){out.err=String(e);}
 show();setTimeout(show,3000);
 </script></body>
