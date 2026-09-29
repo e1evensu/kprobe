@@ -3,20 +3,29 @@
 <body style="background:#fff;color:#000;font:15px monospace;padding:8px">
 <pre id="o" style="white-space:pre-wrap;word-break:break-all;font-size:14px">running…</pre>
 <script>
-var out={href:location.href,hasWindVane:(typeof window.WindVane),hasBridge:!!window.__windvane__,res:[]};
+var out={href:location.href,hasWE:!!window.WE,weMethods:[],calls:[],err:null};
 function show(){document.getElementById('o').textContent=JSON.stringify(out,null,1);}
-function ok(t,o,m){return function(r){out.res.push(t+" "+o+"."+m+" OK:"+JSON.stringify(r).slice(0,800));show();};}
-function bad(t,o,m){return function(e){out.res.push(t+" "+o+"."+m+" FAIL:"+JSON.stringify(e).slice(0,300));show();};}
-function C(t,o,m,p){
+function methodsOf(b){var s={},a=[],o=b;for(var d=0;d<5&&o;d++){try{Object.getOwnPropertyNames(o).forEach(function(p){if(!s[p]){s[p]=1;a.push(p);}});}catch(e){}o=Object.getPrototypeOf(o);}return a;}
+function tryCall(name){
   try{
-    if(window.WindVane&&window.WindVane.call){window.WindVane.call(o,m,p||{},ok(t,o,m),bad(t,o,m));out.res.push(t+" "+o+"."+m+" [dispatched via WindVane.call]");}
-    else if(window.__windvane__&&window.__windvane__.call){window.__windvane__.call(o,m,p||{},ok(t,o,m),bad(t,o,m));out.res.push(t+" "+o+"."+m+" [dispatched via __windvane__.call]");}
-    else{out.res.push("no call API");}
-  }catch(e){out.res.push(t+" "+o+"."+m+" EXC:"+e);}
+    var r=window.WE[name]();
+    out.calls.push("WE."+name+"() => "+JSON.stringify(r).slice(0,500));
+  }catch(e){out.calls.push("WE."+name+"() !! "+String(e).slice(0,200));}
   show();
 }
-C("READ","WVLocation","getLocation",{address:true,gps:true,network:true});
-C("READ","CNHybridBaseInfoPlugin","getBaseInfo",{});
-C("READ","CNHybridCNAccount","isBindTaobao",{});
-show();setTimeout(show,4000);setTimeout(show,9000);setTimeout(show,15000);
+function tryCallCB(name){
+  try{
+    window.WE[name]("{}",function(r){out.calls.push("WE."+name+"(cb) OK:"+JSON.stringify(r).slice(0,500));show();},function(e){out.calls.push("WE."+name+"(cb) FAIL:"+JSON.stringify(e).slice(0,200));show();});
+    out.calls.push("WE."+name+"(cb) [dispatched]");
+  }catch(e){out.calls.push("WE."+name+"(cb) EXC:"+e);}
+  show();
+}
+try{
+  if(window.WE){ out.weMethods=methodsOf(window.WE).slice(0,60); }
+  // 只读探测：iswifi(无害) + get_deviceid(IMEI, 本机自有) —— 不碰 addCart/opennew 等写/危险
+  tryCall("iswifi");
+  tryCall("get_deviceid");
+  tryCallCB("get_deviceid");
+}catch(e){out.err=String(e);}
+show();setTimeout(show,3000);
 </script></body>
